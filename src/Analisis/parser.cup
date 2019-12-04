@@ -1,0 +1,656 @@
+package Analisis;
+import java_cup.runtime.Symbol;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import AST.*;
+import Utilidades.ErrorC;
+import AST.Instruccion.*;
+import AST.Instruccion.Ciclos.*;
+import AST.Expresion.*;
+import AST.Entorno.*;
+import AST.Expresion.Aritmetica.*;
+import AST.Expresion.Relacional.*;
+import AST.Expresion.Logica.*;
+import AST.Expresion.Arreglo.*;
+import AST.Expresion.Casteo.*;
+import AST.Expresion.Casteo.Explicito.*;
+import AST.Expresion.Funcion.*;
+import AST.Clase.*;
+
+
+parser code
+{:	   	
+	public ArrayList<ErrorC> listaErrores = new ArrayList();	
+	public ArrayList<Instruccion> ast = new ArrayList<Instruccion>();
+
+	public AST raiz = null;
+
+	/*@Override
+	public void syntax_error(Symbol cur_token) 
+	{        
+		List<Integer> listaIdTokens = expected_token_ids();
+		LinkedList<String> listaNombres = new LinkedList<String>();
+		for (Integer expected : listaIdTokens) 
+		{			
+			listaNombres.add(symbl_name_from_id(expected));
+		}		
+		Utilidades.Singlenton.registrarError(String.valueOf(cur_token.value), 
+			String.valueOf(cur_token.value) + ". Se esperaba :"+listaNombres.toString(), ErrorC.TipoError.LEXICO, cur_token.right+1, cur_token.left+1);
+		/*listaErrores.add(
+					listaErrores.add(new ErrorC(ErrorC.TipoError.SINTACTICO,
+								String.valueOf(cur_token.value) + ". Se esperaba :"+listaNombres.toString(),
+								cur_token.right+1,
+								cur_token.left+1));
+                
+	}*/
+
+
+    public void report_error(String message, Object info) 
+    {
+        int linea = 0;
+        int columna = 0;
+        java_cup.runtime.Symbol s = null;
+        StringBuilder m = new StringBuilder("Error Sintactico");
+
+        if (info instanceof java_cup.runtime.Symbol) 
+        {
+            s = ((java_cup.runtime.Symbol) info);
+            if (s.left >= 0) 
+            {                
+                columna = s.left+1;
+                if (s.right>= 0)
+                {
+                    linea = s.right+ 1;
+                }                    
+            }
+        }
+
+        m.append(" Se esperaba: "+message);
+        //System.err.println(m.toString());
+        //System.out.println("Error");
+        //System.out.println("Error linea:"+linea+", col:"+columna);
+        LinkedList<String> toks = new LinkedList();
+
+        if(!expected_token_ids().isEmpty())
+        {
+            Imprimir("No esta vacia "+ expected_token_ids().size());		  
+            for(int w=0; w<expected_token_ids().size(); w++)
+            { 
+                if(expected_token_ids().get(w) !=sym.error)
+                {
+                    int tok = (int)expected_token_ids().get(w);                        
+                    toks.add( symbol_name_from_id(tok) );
+                }
+            }
+        }
+
+        Imprimir(expected_token_ids().size());
+      
+        for(int w=0; w<expected_token_ids().size(); w++)
+        { 
+            if(expected_token_ids().get(w)!=sym.error)
+            {
+                int tok = (int)expected_token_ids().get(w);
+                toks.add( symbol_name_from_id(tok) );
+            }
+        }
+        String esperados = "";
+        for(String id : toks)
+        {
+            if(!esperados.equals(""))
+            {
+                esperados += ", ";
+            }
+            esperados += id;
+            
+        }        
+        Utilidades.Singlenton.registrarError(s.value.toString(), "Se esperaba .. " +esperados, ErrorC.TipoError.SINTACTICO, linea, columna);		                  
+    }	
+
+    public String symbol_name_from_id(int id){
+        return sym.terminalNames[id];
+    }
+
+	/*public void addError(Symbol s)
+	{
+		listaErrores.add(new ErrorC("Sintactico",s.rights.right+1,ConvertirObjectToString(s.value)));
+	}*/
+	public void Imprimir(Object cad)
+	{
+		System.out.println(cad.toString());
+	}	
+:}
+
+
+terminal String tint, tdouble, tchar, tbool, tstring, puntocoma, llavei, llaved, pari, pard, id, corchetei, corcheted, igual, print, println, coma;
+terminal String igualigual, desigual, mayor, menor, menorigual, mayorigual, potencia , tvoid, nulo;
+terminal String abstracto, caso, cat, clase, defecto, hacer, extiende, final_, graph;
+terminal String importar, instanceof_, nuevo, privado, protegido, publico, retorno;
+terminal String arroba, sobrescrito;
+/*Casteos*/
+terminal String leerarchivo,estatico, super_, switch_, este, tochar, todouble, toint, str_, try_, escribir;
+terminal String mientras, para, romper, continuar ,interrogante, dospuntos, aumento, decremento, punto;
+terminal String not, and, or, si, sinosi, sino, tostring, tolower, touper;
+terminal String suma, menos, multi, div, xor, printable, modulo;
+terminal String cadena;
+terminal char caracter;
+terminal int entero;
+terminal double decimal;
+terminal boolean booleano;
+
+non terminal Bloque BLOQUE;
+non terminal ArrayList<Nodo> LINST;
+non terminal Nodo INST;
+non terminal Declaracion DECLARACION;
+non terminal Expresion EXP, AUMENTO, DECREMENTO, EXPLICITCAST;
+non terminal INICIO;
+non terminal Tipo PRIMITIVO;
+non terminal Imprimir PRINT;
+non terminal ImprimirT PRINTABLE;
+non terminal Asignacion ASIG;
+non terminal While WHILE;
+non terminal DoWhile DOWHILE;
+non terminal Break BREAK;
+non terminal Continuar CONTINUE;
+non terminal If IF, ELSE;
+non terminal Ternario TER;
+non terminal For FOR;
+non terminal Expresion ACTUALIZACION, EXPRETORNO;
+non terminal Integer NDIM;
+non terminal ArrayList<Expresion> LEXP;
+non terminal AsignacionVector ASIGV;
+non terminal NodoNario ITEM,LITEM,ARR;
+non terminal Tipo TIPO;
+non terminal ArrayList<Dec> LDEC;
+non terminal Dec DEC;
+non terminal ForEach FOREACH;
+non terminal Caso CASO, DEFECTO;
+non terminal ArrayList<Caso> LCASO;
+non terminal Switch SWITCH;
+non terminal ArrayList<String> LMODFICADOR, CLASEMODIFICADORES;
+non terminal String MODFUNCION, MODCONST;
+non terminal Tipo RESULTADO;
+non terminal ParametroFormal PARFORMAL;
+non terminal ArrayList<ParametroFormal> LPARFORMAL;
+/*non terminal Constructor CONSTRUCTOR;*/
+non terminal Funcion FUNCION, CABECERAMET;
+/*non terminal ArrayList<Nodo> LFUNCION;*/
+non terminal Retorno RETORNO;
+non terminal Llamada LLAMADA;
+non terminal String MODATRIB;
+non terminal ArrayList<Expresion> PARACTUALES,ACTUALES;
+
+/*Atributos de clase*/
+/*non terminal ArrayList<String> LMODATRIB;*/
+/*non terminal ArrayList<Nodo> LDECATRIB;*/
+non terminal DeclaracionAtributo DECATRIB;
+
+/*Produccion de clase*/
+non terminal Clase CLASE, CUERPOCLASE, CUERPO ;
+non terminal ArrayList<Nodo> LCLASE;
+/*Arreglos*/
+non terminal Expresion VALORARREGLO ;
+non terminal Expresion ACCESO, ORIGEN;
+non terminal Expresion INSTANCIA;
+non terminal Expresion VALORASIGNACION;
+non terminal Importar IMPORTAR;
+/*
+precedence left interrogante, punto;
+precedence left or;
+precedence left and;
+precedence left xor;
+precedence left igualigual, desigual;
+precedence left menor, mayor, mayorigual, menorigual, instanceof_;
+precedence left suma, menos;
+precedence left multi, div, modulo;
+precedence left not;
+precedence left aumento, decremento ;
+*/
+
+precedence right interrogante, dospuntos;
+precedence left or;
+precedence left and;
+precedence left xor;
+precedence left igualigual, desigual;
+precedence left menor, menorigual, mayor, mayorigual, instanceof_;
+precedence left suma, menos;
+precedence left div, multi, modulo;
+precedence left not;
+precedence right nuevo;
+precedence nonassoc aumento, decremento, not;
+precedence nonassoc pard , pari;
+precedence nonassoc corcheted , corchetei;
+precedence left punto;
+
+
+
+start with INICIO;
+
+INICIO ::= LCLASE:lista {: Imprimir("Correcto"); raiz = new AST(lista);; :}		
+		;
+
+LCLASE::= 
+         LCLASE:lista CLASE:clase{: lista.add(clase); RESULT = lista;:}
+        |LCLASE:lista IMPORTAR:clase puntocoma {: lista.add(clase); RESULT = lista;:}
+        | CLASE:clase {: ArrayList<Nodo> l = new ArrayList<Nodo>(); l.add(clase); RESULT = l;:}
+        | IMPORTAR:exp puntocoma{: ArrayList<Nodo> l = new ArrayList<Nodo>(); l.add(exp); RESULT = l;:}
+;        
+
+IMPORTAR::= importar:or  cadena:nombre  {:RESULT = new Importar(nombre, orright, orleft);:}
+;
+
+CLASE::= CLASEMODIFICADORES:modificador clase id:nombre llavei CUERPOCLASE:clase llaved 
+            {:
+                clase.setModificadores(modificador); 
+                clase.setId(nombre);                
+                RESULT = clase;
+            :}
+        |CLASEMODIFICADORES:modificador clase id:nombre extiende id:padre llavei CUERPOCLASE:clase llaved 
+            {:
+                clase.setModificadores(modificador); 
+                clase.setId(nombre);
+                clase.setPadre(padre);
+                RESULT = clase;
+            :}
+;
+
+CLASEMODIFICADORES::= LMODFICADOR:l {:RESULT = l;:}
+                    | {:RESULT = new ArrayList<String>(); :}
+;
+CUERPOCLASE::= CUERPO:clase {:RESULT = clase;:}
+            | {:RESULT = new Clase();:}
+
+;
+CUERPO::= 
+          CUERPO:clase FUNCION:f {: clase.addFuncion(f); RESULT = clase;:}         
+        | CUERPO:clase DECATRIB:f puntocoma {: clase.addAtributo(f); RESULT = clase;:}                   
+        | FUNCION:f  {:Clase c = new Clase(fright,fleft); c.addFuncion(f); RESULT = c; :}    
+        | DECATRIB:atributos puntocoma{:Clase c = new Clase(atributosright,atributosleft); c.addAtributo(atributos); RESULT = c;:}
+        /*Sobrescrito*/
+        | arroba sobrescrito FUNCION:f  {:Clase c = new Clase(fright,fleft); f.setSobreescrito(true); c.addFuncion(f); RESULT = c; :}    
+        | CUERPO:clase arroba sobrescrito FUNCION:f {: f.setSobreescrito(true); clase.addFuncion(f); RESULT = clase;:}  
+        ; 
+
+        /*| CUERPOCLASE:clase CONSTRUCTOR:f {: clase.addConstructor(f); RESULT = clase;  :}*/
+        /*| CONSTRUCTOR:f {: Clase c = new Clase(fright,fleft); c.addConstructor(f); RESULT = c; :}*/    
+       
+
+BLOQUE::= llavei LINST:l llaved {:RESULT = new Bloque(l,lright,lleft);:}
+        | llavei:l  llaved {:RESULT = new Bloque(new ArrayList<Nodo>(),lright,lleft);:}
+		;
+
+LINST::= LINST:lista INST:inst {: lista.add(inst); RESULT = lista;:}
+	    |INST:inst {: ArrayList<Nodo> l = new ArrayList<Nodo>(); l.add(inst); RESULT = l;:} ;
+
+INST ::= 
+	  DECLARACION:inst puntocoma {: RESULT = inst; :}    
+    | ASIG:inst  puntocoma {:RESULT = inst;:}      
+	| BLOQUE:inst {: RESULT = inst; :}
+	| PRINT:inst{: RESULT = inst; :}
+    | PRINTABLE:inst{:RESULT = inst;:}    
+    | WHILE:inst {:RESULT = inst;:}
+    | DOWHILE:inst {:RESULT = inst;:}
+    | FOR:inst{:RESULT = inst;:}
+    | BREAK:inst {:RESULT = inst;:}
+    | CONTINUE:inst {:RESULT = inst;:}
+    | IF:inst{:RESULT = inst;:}
+    | AUMENTO:inst puntocoma {:RESULT = inst;:}
+    | DECREMENTO:inst puntocoma {:RESULT = inst;:}
+    | ASIGV:inst puntocoma {:RESULT = inst;:}
+    | FOREACH:inst {:RESULT = inst;:}
+    | SWITCH:inst {:RESULT = inst;:}
+    | RETORNO:inst {:RESULT = inst;:}
+    | LLAMADA:inst puntocoma {:RESULT = inst;:}
+	;
+
+/*Casteos Explicitos*/
+EXPLICITCAST::= str_:t pari EXP:expresion pard {: RESULT = new StringCast(expresion, tright, tleft);:}
+            |  todouble:t pari EXP:expresion pard {: RESULT = new DoubleCast(expresion, tright, tleft);:}
+            |  tochar:t pari EXP:expresion pard {: RESULT = new CharCast(expresion, tright, tleft);:} 
+            |  toint:t pari EXP:expresion pard {: RESULT = new IntCast(expresion, tright, tleft);:}
+;
+
+ACTUALIZACION::= AUMENTO :inst {:RESULT =inst;:}
+                |DECREMENTO :inst {:RESULT =inst;:}
+;
+
+/*Seleccion
+(Expresion cond, ArrayList<Caso> lista, int l, int c)
+*/
+
+SWITCH::= switch_:i pari EXP:condicion pard llavei LCASO:lista llaved
+            {:
+                RESULT = new Switch(condicion, lista, iright, ileft);
+            :}
+            | switch_:i pari EXP:condicion pard llavei LCASO:lista DEFECTO:defecto llaved 
+            {:
+                lista.add(defecto);
+                RESULT = new Switch(condicion, lista, iright, ileft);
+            :}
+;
+
+LCASO::= LCASO:l CASO:caso {:l.add(caso); RESULT = l;:}
+        |CASO:caso {:ArrayList<Caso> l = new ArrayList<Caso>(); l.add(caso); RESULT = l;:}
+;
+
+CASO::= caso:i EXP:condicion dospuntos LINST:linst {:RESULT = new Caso(condicion,new Bloque(linst,linstright,linstleft),iright,ileft);:}
+;
+
+DEFECTO::= defecto:i dospuntos LINST:linst {:RESULT = new Caso(null,new Bloque(linst,linstright,linstleft),iright,ileft);:}
+;
+
+IF::= si:si pari EXP:condicion pard BLOQUE:bloque {:RESULT = new If(condicion, bloque, siright, sileft);:}
+    | si:si pari EXP:condicion pard BLOQUE:bloque sino ELSE:inst2 {: RESULT= new If(condicion,bloque,inst2,siright, sileft);:}
+;
+
+ELSE::= IF:inst  {:RESULT = inst;:}
+      | BLOQUE:bloque {: RESULT = new If(new Literal(new Tipo(Tipo.TypePrimitive.BOOL), true, bloqueright,bloqueleft),bloque, bloqueright, bloqueleft); :}
+;
+
+CONTINUE::= continuar:inst puntocoma {: RESULT = new Continuar(instright, instleft);:}
+;
+
+BREAK::= romper:inst puntocoma {: RESULT = new Break(instright, instleft);:}
+;
+
+WHILE::= mientras:inst pari EXP:condicion pard BLOQUE:bloque {: RESULT = new While(condicion,bloque,instright, instleft);:}
+;
+
+DOWHILE::=  hacer:i BLOQUE:bloque mientras:inst pari EXP:condicion pard puntocoma
+        {:
+            RESULT = new DoWhile(condicion, bloque, iright, ileft);
+        :}
+;
+
+/*FOREACH ForEach(Tipo t, String i, Expresion o, int l, int c)*/
+FOREACH::= para:para pari TIPO:t id:id dospuntos EXP:origen pard BLOQUE:bloque
+        {:RESULT = new ForEach(t,id,origen, bloque, pararight,paraleft);:}
+;
+
+FOR::= 
+      para:para pari DECLARACION:dec puntocoma EXP:condicion puntocoma ACTUALIZACION:act  pard BLOQUE:bloque{: RESULT = new For(dec,condicion,act,bloque, paraleft,pararight);:}
+    | para:para pari ASIG:dec puntocoma EXP:condicion puntocoma ACTUALIZACION:act  pard BLOQUE:bloque{: RESULT = new For(dec,condicion,act,bloque,paraleft,pararight);:}
+;
+
+PRINTABLE::= printable:p pari pard puntocoma {:RESULT = new ImprimirT(pright,pleft); :}
+;
+
+PRINT::= println:p pari EXP:valor pard puntocoma {:RESULT = new Imprimir(valor, pright,pleft); :}
+        | print:p pari EXP:valor pard puntocoma {:RESULT = new Imprimir(valor,false,pright,pleft); :}
+;
+
+                    /*Acceso(Expresion e, Expresion i, int l, int c)*/
+
+ASIG::= ACCESO:origen igual VALORASIGNACION:valor   {: RESULT = new Asignacion(origen , valor, origenright, origenleft);:}       
+       
+
+;
+ASIGV::= id:id LEXP:coordenas igual EXP:valor {: RESULT = new AsignacionVector(id, coordenas, valor,  idright,idleft);:}
+;
+
+ACCESO::= ACCESO:origen punto ORIGEN:destino {: RESULT = new Acceso(origen, destino, origenright, origenleft);:}
+        | ORIGEN:exp {:RESULT = exp;:}
+        | este:exp {:RESULT = new Variable(exp,expright,expleft);:}
+
+;
+        
+ORIGEN::=      id:id     {:RESULT = new Variable(id, idright, idleft);:}
+        /*| LLAMADA:f   {:RESULT = f;:}*/
+        | ORIGEN:origen LEXP:coor {: RESULT = new AccesoVector(origen , coor , origenright, origenleft);:}
+        
+;
+
+/*Arreglos.
+DECLARACION::=  
+	    TIPO:t id:id  {: RESULT = new Declaracion(t, id , tright,tleft); :}
+	   |TIPO:t id:id  igual EXP:valor  {: RESULT = new Declaracion(t, id, valor, tright,tleft); :}
+       
+       |TIPO:t id:id NDIM:n {: RESULT = new Declaracion(t, id , n, tright,tleft); :}    
+       |TIPO:t id:id NDIM:n igual EXP:valor {: RESULT = new Declaracion(t, id , n, valor, tright,tleft); :}                
+       |TIPO:t id:id NDIM:n igual ARR:valor {: RESULT = new Declaracion(t, id , n, new ExpresionArreglo(valor, valorright, valorleft), tright,tleft); :}
+	   ;
+*/
+
+
+DECLARACION::= TIPO:t LDEC:lista {: RESULT = new Declaracion(t, lista, tright, tleft); :} ;
+
+
+LDEC::= LDEC:lista  coma DEC:dec {: lista.add(dec); RESULT = lista;:}
+        |DEC:dec {: ArrayList<Dec> lista = new ArrayList<Dec>(); lista.add(dec); RESULT = lista;:}
+;
+
+DEC::= 
+      id:id {: RESULT = new Dec(id,idright, idleft);:}
+    | id:id igual VALORASIGNACION:valor {: RESULT = new Dec(id,valor, idright, idleft);:}
+    | id:id NDIM:dim {: RESULT = new Dec(id,dim, idright, idleft);:}
+    | id:id NDIM:dim igual VALORARREGLO:valor {: RESULT = new Dec(id,dim, valor, idright, idleft);:}
+    | id:id NDIM:dim igual ARR:valor {: RESULT = new Dec(id,dim, new ExpresionArreglo(valor, valorright, valorleft), idright, idleft);:}
+;   
+
+VALORASIGNACION::= 
+            EXP:exp {:RESULT = exp;:}
+         |  INSTANCIA:exp  {:RESULT = exp;:}
+         /*| nulo:r {:RESULT = new Literal(new Tipo(Tipo.TypePrimitive.NULO), null, rright, rleft);:}*/
+;
+
+VALORARREGLO::=
+         nuevo:n PRIMITIVO:tipo LEXP:l {: RESULT = new ExpresionArreglo(tipo,l,nright,nleft);:}
+        |nuevo:n id:tipo LEXP:l {: RESULT = new ExpresionArreglo(new Tipo(tipo), l,nright,nleft);:}
+;
+TIPO::= PRIMITIVO:t{:RESULT = t;:}
+      | id:id {:RESULT = new Tipo(id,idright, idleft);:}
+;
+
+/*Dimensiones*/
+NDIM::= NDIM:n corchetei corcheted {:RESULT = n+1;:}
+        |corchetei corcheted {: RESULT = 1;:}
+;  
+
+/*
+EXPRESION::= 
+            EXP:exp {:RESULT = exp;:}
+          | RETORNO:r {:RESULT = r;:}
+;
+*/
+
+
+EXP::= 
+        /*Lógicas*/
+         EXP:opi and EXP:opd {: RESULT = new And(opi, opd, opiright,opileft);:}
+        |EXP:opi or EXP:opd {: RESULT = new Or(opi, opd, opiright,opileft);:}
+        |EXP:opi xor EXP:opd {: RESULT = new Xor(opi,opd,opiright,opileft);:} 
+        /*Instanceof*/
+        |EXP:op instanceof_ id:tipo {:RESULT = new InstanceOf(op,tipo, opright, opleft);:}        
+        |not EXP:op {: RESULT = new Not(op, opright,opleft);:}        
+        /*Relacionales*/
+        |EXP:opi igualigual EXP:opd {:RESULT = new Igual(opi,opd,opiright,opileft);:}
+        |EXP:opi desigual EXP:opd {:RESULT = new Desigual(opi,opd,opiright,opileft);:}
+        |EXP:opi mayor EXP:opd {:RESULT = new Mayor(opi,opd,opiright,opileft);:}
+        |EXP:opi mayorigual EXP:opd {:RESULT = new MayorIgual(opi,opd,opiright,opileft);:}
+        |EXP:opi menor EXP:opd {:RESULT = new Menor(opi,opd,opiright,opileft);:}
+        |EXP:opi menorigual EXP:opd {:RESULT = new MenorIgual(opi,opd,opiright,opileft);:}        
+        /*Ariteticas*/
+        |EXP:opi suma EXP:opd {: RESULT = new Suma(opi,opd,opiright,opileft);:}       
+        |EXP:opi menos EXP:opd {: RESULT = new Resta(opi,opd,opiright,opileft);:}          
+        |EXP:opi multi EXP:opd {: RESULT = new Multiplicacion(opi,opd,opiright,opileft);:}  
+        |EXP:opi div EXP:opd {: RESULT = new Division(opi,opd,opiright,opileft);:}  
+        |EXP:opi modulo EXP:opd {: RESULT = new Modulo(opi,opd,opiright,opileft);:}  
+        |potencia:pot pari EXP:opi coma EXP:opd pard {:RESULT = new Potencia(opi,opd,potright,potleft);:}        
+        |menos EXP:op {: RESULT = new Menos(op, opright,opleft);:}
+        /*Ternario*/
+        |TER:op {:RESULT = op;:}                        
+        /*Aumento ++ y --*/
+        |AUMENTO:op {:RESULT = op;:}        
+        |DECREMENTO:op {:RESULT = op;:}        
+        |LLAMADA:exp {:RESULT = exp;:}
+        /*Casteos*/
+        |pari:t PRIMITIVO:tipo pard EXP:op {:RESULT = new Casteo(op,tipo, tright, tleft);:} 
+        |pari:t id:tipo pard EXP:op {:RESULT = new Casteo(op,tipo, tright, tleft);:}
+        /*Primitivas*/
+        |entero:v {: RESULT = new Literal(new Tipo(Tipo.TypePrimitive.INT), v, vright,vleft);:}
+        |decimal:v {: RESULT = new Literal(new Tipo(Tipo.TypePrimitive.DOUBLE), v, vright,vleft);:}
+        |booleano:v {: RESULT = new Literal(new Tipo(Tipo.TypePrimitive.BOOL), v, vright,vleft);:}
+        |cadena:v {: RESULT = new Literal(new Tipo(Tipo.TypePrimitive.STRING), v, vright,vleft);:}
+        |caracter:v {: RESULT = new Literal(new Tipo(Tipo.TypePrimitive.CHAR), v, vright,vleft);:}
+        /*ACCESO*/
+        |ACCESO:v {:RESULT = v;:}
+        |pari EXP:op pard {: RESULT = op;:}
+        |EXPLICITCAST:exp {:RESULT = exp;:}
+        | nulo:r {:RESULT = new Literal(new Tipo(Tipo.TypePrimitive.NULO), null, rright, rleft);:}
+        /*|LLAMADA:exp {:RESULT = exp;:} estas están incluidas en acceso*/        
+;
+
+INSTANCIA::=          
+        nuevo:n TIPO:tipo pari PARACTUALES:lista pard {: RESULT = new Instancia(tipo, lista, nright, nleft);:}
+;
+
+/*ACCESO::= */
+//public Llamada(Expresion o, String n, ArrayList<Expresion> p, int l, int c)
+LLAMADA::=            
+            ACCESO:origen punto id:nombre pari PARACTUALES:l pard {:RESULT = new Llamada(origen,nombre, l, origenright,origenleft);:}                      
+           | id:nombre pari PARACTUALES:l pard {:RESULT = new Llamada(null, nombre, l, nombreright,nombreleft);:}                      
+;
+
+RETORNO ::= retorno:r EXPRETORNO:exp puntocoma{:RESULT = new Retorno(exp, rright, rleft);:} 
+          | retorno:r puntocoma {: RESULT = new Retorno( rright, rleft);:}
+;
+
+/*Lista de parametros actuales para llamadas a funciones*/
+PARACTUALES::= ACTUALES:l{:RESULT = l;:}
+            | {:RESULT = new ArrayList<Expresion>();:}
+;            
+ACTUALES::= ACTUALES:l coma EXP:exp {:l.add(exp);RESULT = l;:}
+              |EXP:exp {:ArrayList<Expresion> l = new ArrayList<Expresion>(); l.add(exp); RESULT = l ;:}
+;
+
+EXPRETORNO::= 
+            EXP:exp {:RESULT = exp;:}
+          /*| nulo:r {:RESULT = new Literal(new Tipo(Tipo.TypePrimitive.NULO), null, rright, rleft);:}*/
+;
+
+/*Declaracion de métodos*/
+FUNCION::= CABECERAMET:funcion BLOQUE:bloque {: funcion.setInstrucciones(bloque); RESULT = funcion;:}
+            | CABECERAMET:funcion puntocoma {:RESULT = funcion;:}
+;
+
+CABECERAMET::= 
+        LMODFICADOR:m RESULTADO:res id:nombre pari LPARFORMAL:lf pard {: Funcion f = new Funcion(m,res,nombre, lf, mright,mleft ); RESULT = f;:}
+      | RESULTADO:res id:nombre pari LPARFORMAL:lf pard {: Funcion f = new Funcion( new ArrayList<String>(),res,nombre, lf, resright,resleft ); RESULT = f;:}
+      | LMODFICADOR:modificador id:nombre pari LPARFORMAL:formales pard {:RESULT = new Constructor(modificador,nombre,formales,nombreright,nombreleft);:}
+      | id:nombre pari LPARFORMAL:formales pard  {:RESULT = new Constructor(new ArrayList<String>(),nombre,formales, nombreright,nombreleft);:}       
+      /*| LMODFICADOR:modificador */
+
+;
+
+RESULTADO::= TIPO:t {:  RESULT = t;:}
+            |tvoid:t {:  RESULT = new Tipo(t);:}
+            /*|id:t {:  RESULT = new Tipo(t);:}*/
+;
+
+LPARFORMAL::= 
+         LPARFORMAL:lista coma PARFORMAL:par {:lista.add(par); RESULT = lista;:}
+        |PARFORMAL:par {:ArrayList<ParametroFormal> l = new ArrayList<ParametroFormal>(); l.add(par); RESULT = l;:}
+        |{: ArrayList<ParametroFormal> l = new ArrayList<ParametroFormal>();RESULT = l; :}
+;
+
+PARFORMAL::=  
+         TIPO:tipo id:nombre{: RESULT = new ParametroFormal(tipo, nombre, true,0, tiporight, tipoleft);:}
+        | final_:f TIPO:tipo id:nombre {: RESULT = new ParametroFormal(tipo, nombre, true,0,fright, fleft);:}
+        | TIPO:tipo id:nombre NDIM:n{: RESULT = new ParametroFormal(tipo, nombre, true,n, tiporight, tipoleft);:}
+        | final_:f TIPO:tipo id:nombre NDIM:n {: RESULT = new ParametroFormal(tipo, nombre, true, n, fright, fleft);:}             
+;
+
+LMODFICADOR ::= 
+              LMODFICADOR:l MODFUNCION:m {: l.add(m); RESULT = l; :}
+            | MODFUNCION:m {: ArrayList<String> l = new ArrayList<String>() ; if(m!=null){l.add(m);} RESULT = l;:}
+;
+
+MODFUNCION::=                
+               MODATRIB:m {:RESULT = m;:}
+            |  abstracto:m {:RESULT = m;:}
+;
+/*Fin declaración de métodos*/
+
+/*Declaración de atributos*/
+//DeclaracionAtributo(ArrayList<String> lm, Tipo t, ArrayList<Dec> lista, int l, int c)
+
+DECATRIB::= LMODFICADOR:lm RESULTADO:tipo LDEC:declaraciones
+            {: 
+                Declaracion d  = new Declaracion(tipo,declaraciones,tiporight,tipoleft);     
+                RESULT = new DeclaracionAtributo(lm, d.tipo, d, lmright, lmleft); 
+            :} 
+            |RESULTADO:tipo LDEC:declaraciones
+            {: 
+                Declaracion d  = new Declaracion(tipo,declaraciones,tiporight,tipoleft);     
+                ArrayList<String> l = new ArrayList<String>();
+                l.add("public");
+                RESULT = new DeclaracionAtributo(l, d.tipo, d, tiporight,tipoleft); 
+            :}             
+;
+
+//TIPO:t LDEC:lista {: RESULT = new Declaracion(t, lista, tright, tleft); :}
+
+/*
+LMODATRIB::= 
+          LMODATRIB:lista MODATRIB:mod {:lista.add(mod); RESULT = lista;:}
+        | MODATRIB:mod {:ArrayList<String> l = new ArrayList<String>(); l.add(mod); RESULT = l;:}
+; 
+  */  
+
+MODATRIB::= 
+                final_:m {:RESULT = m;:}
+            |  estatico:m {:  RESULT = m;:}            
+            |  MODCONST:m {:RESULT = m;:}            
+;
+
+/*Fin de atributos*/
+
+
+/*Inicio constructores*/
+//Funcion(ArrayList<String> mod, String id, ArrayList<ParametroFormal> lpf , int l, int c)
+/*CONSTRUCTOR::= 
+        MODCONST:modificador id:nombre pari LPARFORMAL:formales pard BLOQUE:bloque {:RESULT = new Constructor(mod,nombre,formales,bloque, nombreright,nombreleft);:}
+       |id:nombre pari LPARFORMAL:formales pard BLOQUE:bloque {:RESULT = new Constructor(new ArrayList<String>(),nombre,formales,bloque, nombreright,nombreleft);:} 
+;
+*/
+MODCONST::= 
+               publico:m {:RESULT = m;:}
+            |  protegido:m {:RESULT = m;:}
+            |  privado:m {:RESULT = m;:}
+;            
+/*Fin declaración de constructores*/
+
+
+LEXP::= LEXP:l corchetei EXP:exp corcheted{:l.add(exp); RESULT = l;:}
+        | corchetei EXP:exp corcheted {: ArrayList<Expresion> l = new ArrayList<Expresion>(); l.add(exp); RESULT = l;:}
+;
+
+ARR::= llavei LITEM:nodo llaved {: RESULT = nodo;:}
+;
+
+LITEM::= LITEM:nodo coma ITEM:item {: nodo.addHijo(item); RESULT = nodo; :}
+        |ITEM:item  {: NodoNario nodo = new NodoNario(); nodo.addHijo(item); RESULT = nodo;:}
+;
+
+ITEM::= EXP:exp {: RESULT = new NodoNario(exp);:} 
+        |ARR:exp {: RESULT = exp;:} 
+;
+
+AUMENTO::= EXP:op aumento {:RESULT = new Aumento(op, opright, opleft);:}
+          |aumento EXP:op {:RESULT = new Preaumento(op, opright, opleft);:}       
+            ;
+DECREMENTO::= EXP:op decremento {:RESULT = new Decremento(op, opright, opleft);:}
+              |decremento EXP:op {:RESULT = new Predecremento(op, opright, opleft);:}
+;
+
+TER::= EXP:c interrogante EXP:v dospuntos EXP:f{:RESULT = new Ternario(c,v,f,cright,cleft);:}
+;
+
+PRIMITIVO ::=   
+        tint:t {:RESULT = new Tipo(Tipo.TypePrimitive.INT,tright, tleft);:}
+		|tchar:t {:RESULT =  new Tipo(Tipo.TypePrimitive.CHAR,tright, tleft);:}
+        |tdouble:t {:RESULT = new Tipo(Tipo.TypePrimitive.DOUBLE,tright, tleft);:}
+		|tbool:t {:RESULT = new Tipo(Tipo.TypePrimitive.BOOL,tright, tleft);:}
+		|tstring:t {:RESULT = new Tipo(Tipo.TypePrimitive.STRING,tright, tleft);:}		
+;
